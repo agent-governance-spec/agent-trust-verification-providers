@@ -19,15 +19,15 @@ The pattern was extracted from the design conversations in two closed OpenClaw i
 
 **Editorial process for substantive disagreements.** Resolution of substantive disagreements between editors follows a two-step path. Editors first attempt convergent revision through normal PR review. If convergence is not reached within two review rounds, the disputed sentence or section is labeled with both editor positions and the resolution is deferred to public WG input over a defined window (typically two weeks). No external arbiter is invoked. If consensus still does not form, the disputed item is marked unresolved in v0.x and revisited at the next minor version boundary.
 
-**Implementation names remain property of respective projects.** Provider names referenced in this specification (APS, MolTrust, AgentID, AgentNexus, AgentLair, and others) remain the property of their respective projects and contributors. Inclusion in this specification does not transfer trademark, naming, or other proprietary rights. Removal of a provider reference may be requested by that provider\'s named maintainer.
+**Implementation names remain property of respective projects.** Provider names referenced in this specification (APS, MolTrust, AgentID, AgentNexus, AgentLair, and others) remain the property of their respective projects and contributors. Inclusion in this specification does not transfer trademark, naming, or other proprietary rights. Removal of a provider reference may be requested by that provider's named maintainer.
 
-**Editor entry path.** Additional editors may join during a v0.x line by mutual consent of the existing editors, accompanied by substantive design contribution to the specification\'s open structural items. New editors are added in PR-merge messages and the editor line in this section. Major-version (v1.0+) editor changes follow the editorial process clause above.
+**Editor entry path.** Additional editors may join during a v0.x line by mutual consent of the existing editors, accompanied by substantive design contribution to the specification's open structural items. New editors are added in PR-merge messages and the editor line in this section. Major-version (v1.0+) editor changes follow the editorial process clause above.
 
 ## 2. Scope and non-goals
 
 **In scope.** What hooks an Agent Trust Verification Provider (TVP) plugin should register, what each handler does, how multiple TVPs compose when more than one is installed, the configuration schema providers should accept, conformance criteria, and pointers to reference implementations.
 
-**Not in scope.** OpenClaw core itself, the OpenClaw plugin SDK design, what counts as a valid trust signal (a separate cross-vendor effort lives at github.com/aeoess/agent-governance-vocabulary), any specific provider\'s internal verification methodology, and any commercial framing of trust as a service. The pattern is provider-agnostic and substrate-agnostic.
+**Not in scope.** OpenClaw core itself, the OpenClaw plugin SDK design, what counts as a valid trust signal (a separate cross-vendor effort lives at github.com/aeoess/agent-governance-vocabulary), any specific provider's internal verification methodology, and any commercial framing of trust as a service. The pattern is provider-agnostic and substrate-agnostic.
 
 ## 3. Problem statement
 
@@ -37,7 +37,7 @@ The OpenClaw plugin SDK already exposes the hooks needed to add this layer: `bef
 
 ## 4. Architecture
 
-A TVP plugin SHOULD register on the public OpenClaw plugin hooks named in section 5. Handlers SHOULD return blocking, warning, or pass-through results based on configurable policy. The plugin SHOULD NOT modify other plugins\' state, write to user files outside the OpenClaw config directory, or perform network calls outside the verification path. All blocking decisions MUST be deterministic given the same input event and config.
+A TVP plugin SHOULD register on the public OpenClaw plugin hooks named in section 5. Handlers SHOULD return blocking, warning, or pass-through results based on configurable policy. The plugin SHOULD NOT modify other plugins' state, write to user files outside the OpenClaw config directory, or perform network calls outside the verification path. All blocking decisions MUST be deterministic given the same input event and config.
 
 This pattern is intentionally trust-model agnostic. The canonical governance vocabulary at github.com/aeoess/agent-governance-vocabulary distinguishes three first-class signal classes that TVPs may implement: `governance_attestation` for authority-based providers (delegation tokens, scoped permits, revocation chains), `behavioral_trust` for behavior-based providers (scored trust derived from observed behavior over time), and `trust_verification` for identity-based providers (cryptographic identity verification, endorsement chain validation). Different TVPs implement different signal classes; section 7 specifies how their outputs compose at the gateway. The pattern does not canonicalize one trust model over another. It specifies the integration surface that lets multiple trust models coexist on the same OpenClaw deployment.
 
@@ -71,13 +71,13 @@ Handler MUST handle missing-author gracefully: skills installed from local archi
 
 ### 5.2 `before_tool_call` — REQUIRED
 
-Triggered before every agent tool invocation. The TVP receives the tool name and parameters. The provider checks the call against the agent\'s active delegation or authorization context. For tools outside the active scope, the handler returns `{block: true}` with a reason. For tools inside the scope but flagged as high-risk in config, the handler MAY return `{requireApproval}` to force user confirmation instead of blocking.
+Triggered before every agent tool invocation. The TVP receives the tool name and parameters. The provider checks the call against the agent's active delegation or authorization context. For tools outside the active scope, the handler returns `{block: true}` with a reason. For tools inside the scope but flagged as high-risk in config, the handler MAY return `{requireApproval}` to force user confirmation instead of blocking.
 
 The handler MUST complete in under 100ms in the typical case (cached delegation lookup) and under 500ms in the cold case (gateway round-trip). Slower handlers degrade agent responsiveness and SHOULD be optimized via local caching.
 
 ### 5.3 `inbound_claim` — OPTIONAL
 
-Triggered when an inbound inter-agent message or claim arrives. The TVP receives sender identity, channel, and payload metadata. The provider verifies any signed envelope on the inbound claim against the sender\'s published key material. Unsigned or signature-failing messages MAY be blocked, warned, or passed through based on config.
+Triggered when an inbound inter-agent message or claim arrives. The TVP receives sender identity, channel, and payload metadata. The provider verifies any signed envelope on the inbound claim against the sender's published key material. Unsigned or signature-failing messages MAY be blocked, warned, or passed through based on config.
 
 This hook SHOULD be implemented by providers that ship signed inter-agent messaging primitives. Providers that only verify identity at install time MAY omit it.
 
@@ -93,10 +93,10 @@ Triggered when the OpenClaw gateway process starts. The TVP performs its own sta
 
 ## 6. Gateway RPC methods
 
-A TVP SHOULD expose at least the following capabilities via `api.registerGatewayMethod()`, namespaced by provider. Method names within each provider\'s namespace are at the provider\'s discretion (schema-shape); the capabilities listed are required (schema-fields):
+A TVP SHOULD expose at least the following capabilities via `api.registerGatewayMethod()`, namespaced by provider. Method names within each provider's namespace are at the provider's discretion (schema-shape); the capabilities listed are required (schema-fields):
 
-- A method returning the provider\'s trust output for a given agent (e.g., `aps.checkGrade(agentId)` for authority-based providers, `moltrust.getTrustScore(agentId)` for behavior-based providers)
-- A method verifying a delegation, authorization, or attestation token under the provider\'s scheme (e.g., `{provider}.verifyDelegation(token)` or `{provider}.verifyAttestation(credential)`)
+- A method returning the provider's trust output for a given agent (e.g., `aps.checkGrade(agentId)` for authority-based providers, `moltrust.getTrustScore(agentId)` for behavior-based providers)
+- A method verifying a provider-signed attestation under the provider's own scheme (e.g., `{provider}.verifyDelegation(token)` for authority-based providers, `{provider}.verifyAttestation(credential)` for identity-based providers, `{provider}.verifyEndorsement(chain)` for behavior-based providers)
 - A method signing an outbound payload with the local TVP key (e.g., `{provider}.signMessage(payload)`)
 
 Cross-plugin callers SHOULD be able to discover available providers by inspecting registered method namespaces. A future revision of this specification MAY define a discovery method.
@@ -165,8 +165,8 @@ A plugin claiming conformance to this pattern version 0.1 MUST:
 5. Complete `before_tool_call` handler in under 500ms in the cold case
 6. Use namespaced gateway RPC methods (`{provider}.{method}`)
 7. Use namespaced outbound headers (`X-{PROVIDER}-*`) if implementing `before_dispatch`
-8. Not mutate state outside the plugin\'s own directory
-9. Publish a verifier endpoint or local key material that downstream verifiers can use to independently check the provider\'s signed outputs
+8. Not mutate state outside the plugin's own directory
+9. Publish a verifier endpoint or local key material that downstream verifiers can use to independently check the provider's signed outputs
 10. Document its trust signal semantics and grade scale in a publicly accessible specification or crosswalk
 
 A plugin claiming conformance SHOULD additionally:
@@ -180,11 +180,11 @@ A conformance test suite is out of scope for v0.1 but is anticipated for a later
 
 ## 10. Reference implementations
 
-Reference implementations are published under `providers/` in this specification\'s repository. The reference suite is open: any provider that implements the pattern is invited to contribute a one-page summary at `providers/{name}.md` documenting the provider\'s grade scale, hook coverage, configuration shape, and verifier endpoint.
+Reference implementations are published under `providers/` in this specification's repository. The reference suite is open: any provider that implements the pattern is invited to contribute a one-page summary at `providers/{name}.md` documenting the provider's grade scale, hook coverage, configuration shape, and verifier endpoint.
 
 Two reference implementations launch concurrent with v0.1 publication:
 
-**MolTrust v2.0** — behavior-based trust verification. Maintainer: Lars Kroehl (CryptoKRI GmbH). npm package: `@moltrust/openclaw` (v2.0 upcoming; current latest tag v1.0.1). Trust output: behavior-derived score against the canonical `behavioral_trust` signal class. Signing: W3C Verifiable Credentials with DID-based identity, anchored to Base L2.
+**MolTrust v2.0** — combined behavior-based and identity-based trust verification. Maintainer: Lars Kroehl (CryptoKRI GmbH). npm package: `@moltrust/openclaw` (v2.0 upcoming; current latest tag v1.0.1). Trust output: behavior-derived score against the canonical `behavioral_trust` signal class, combined with identity verification against the `trust_verification` signal class. Signing: W3C Verifiable Credentials with DID-based identity, anchored to Base L2.
 
 **Agent Passport System (APS) OpenClaw plugin** — authority-based trust verification. Maintainer: Tymofii Pidlisnyi (APS by AEOESS). npm package: `agent-passport-system-openclaw-plugin` (`github.com/aeoess/openclaw-plugin-aps`). Trust output: passport-grade-scoped delegation against the canonical `governance_attestation` signal class. Trust grades 0-3 (self-asserted, infrastructure-attested, provider-attested, hardware-attested) per the Agent Social Contract paper (Zenodo DOI 10.5281/zenodo.18749779). Signing: Ed25519 envelope signatures, JWS via the public gateway at gateway.aeoess.com.
 
@@ -207,7 +207,7 @@ These are deliberately not answered in v0.1. Implementation experience across at
 
 This pattern would not exist in this shape without two prior contributions. The OpenClaw plugin surface, designed by Peter Steinberger and the OpenClaw maintainer team, exposes exactly the hooks a trust verification layer needs without requiring core changes; this pattern composes against that surface and adds nothing to it. The original RFC framing in OpenClaw issue #49971 by Lars Kroehl (MolTrust / CryptoKRI GmbH) identified the problem space, the hook coverage, and the multi-issuer composition need that v0.1 documents.
 
-The contributors to `aeoess/agent-governance-vocabulary` ground the cross-provider semantics referenced in section 4 and section 7. The vocabulary\'s `trust_verification`, `governance_attestation`, and `behavioral_trust` canonical signal definitions are the substrate this pattern composes against.
+The contributors to `aeoess/agent-governance-vocabulary` ground the cross-provider semantics referenced in section 4 and section 7. The vocabulary's `trust_verification`, `governance_attestation`, and `behavioral_trust` canonical signal definitions are the substrate this pattern composes against.
 
 This specification is published under CC-BY-4.0. Each reference implementation is published separately under its own license; the APS reference implementation is Apache 2.0; the MolTrust reference implementation under its own license per its package.
 
