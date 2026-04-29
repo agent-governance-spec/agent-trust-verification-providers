@@ -1,6 +1,6 @@
 # AgentLair — Trust Verification Provider Summary
 
-**Signal class:** `behavioral_trust` (canonical mapping: `peer_review`, exact)  
+**Signal class:** `behavioral_trust` (canonical mapping: `behavioral_trust`, exact)  
 **Trust model:** behavior-based  
 **Maintainer:** @piiiico  
 **Verifier endpoint:** `https://agentlair.dev/v1/trust/verify`  
@@ -19,9 +19,9 @@ Trust scoring is three-dimensional:
 - **Restraint** — whether the agent stays within its stated scope (tool use, resource consumption, delegation depth)
 - **Transparency** — whether observable behavior matches declared intent
 
-Scores initialize from a Bayesian cold-start prior (0.50 per dimension). Prior narrows as behavioral events accumulate. Typically converges after 20–30 observed tool calls. Non-test agents running in production have non-null scores; the scoring pipeline is live.
+Scores initialize from a Bayesian cold-start prior (0.30, skeptical default). Prior narrows as behavioral events accumulate. Typically converges after ~100 observed behavioral events. Non-test agents running in production have non-null scores; the scoring pipeline is live.
 
-The `peer_review` mapping in the vocabulary crosswalk is exact. AgentLair's pre-delegation behavioral trust check maps directly to this signal class. Production evidence (live endpoints, behavioral event ingestion, non-null scores on non-test agents) is what moved the match type from `partial` to `exact` — per the match-type rationale in the merged crosswalk.
+The `behavioral_trust` mapping in the vocabulary crosswalk is exact. AgentLair's pre-delegation behavioral trust check maps directly to this signal class. Production evidence (live endpoints, behavioral event ingestion, non-null scores on non-test agents) is what moved the match type from `partial` to `exact` — per the match-type rationale in the merged crosswalk.
 
 ---
 
@@ -35,20 +35,20 @@ The `peer_review` mapping in the vocabulary crosswalk is exact. AgentLair's pre-
 | `inbound_claim` | OPTIONAL — planned | Inbound AAT signature verification |
 | `before_dispatch` | OPTIONAL — planned | Outbound `X-AGENTLAIR-*` header attachment |
 
-`before_tool_call` is the primary signal surface. It runs the behavioral trust check against the AAT holder's accumulated score before each tool dispatch — the exact pre-delegation moment that produces the `peer_review` signal.
+`before_tool_call` is the primary signal surface. It runs the behavioral trust check against the AAT holder's accumulated score before each tool dispatch — the exact pre-delegation moment that produces the `behavioral_trust` signal.
 
 ---
 
 ## Grade scale
 
-Scores are continuous floats in [0.0, 1.0] per dimension. Aggregate trust is a weighted combination (default weights: consistency 0.4, restraint 0.4, transparency 0.2).
+Scores are integers in [0, 100] per dimension (wire format). Aggregate trust is a weighted combination (default weights: restraint 42.9%, consistency 35.7%, transparency 21.4%).
 
 | Aggregate range | Default policy |
 |----------------|---------------|
-| 0.00–0.40 | Warn (permissive by default, configurable to block) |
-| 0.41–1.00 | Pass-through |
+| 0–40 | Warn (permissive by default, configurable to block) |
+| 41–100 | Pass-through |
 
-Cold-start prior: 0.50. Converges with evidence; 20–30 events typical.
+Cold-start prior: 0.30 (skeptical default). Converges with evidence; full override at ~100 observations.
 
 ---
 
@@ -68,18 +68,18 @@ Follows SPEC.md §8 schema-fields exactly (`provider`, `endpoints`, `credentials
   },
   "policy": {
     "trustThresholds": {
-      "warnBelow": 0.41,
+      "warnBelow": 41,
       "blockBelow": null
     },
     "dimensions": ["consistency", "restraint", "transparency"],
     "dimensionWeights": {
-      "consistency": 0.4,
-      "restraint": 0.4,
-      "transparency": 0.2
+      "consistency": 0.357,
+      "restraint": 0.429,
+      "transparency": 0.214
     },
     "coldStart": {
-      "prior": 0.5,
-      "convergenceEvents": 25
+      "prior": 0.30,
+      "convergenceEvents": 100
     },
     "enforceScope": true
   }
@@ -94,7 +94,9 @@ Default policy: permissive-with-warnings per SPEC.md §9 conformance requirement
 
 `POST https://agentlair.dev/v1/trust/verify`
 
-Accepts an AAT (EdDSA JWT). Returns three-dimensional scores and aggregate. Response cached per AAT claim set; cache TTL 60s (typical-case `before_tool_call` latency under 100ms after first call).
+Accepts an AAT (EdDSA JWT). Returns three-dimensional scores and aggregate in [0, 100] range. Response cached per AAT claim set; cache TTL 60s (typical-case `before_tool_call` latency under 100ms after first call).
+
+Related crosswalk endpoints: `GET /v1/trust/{agentId}` (full trust profile) and `GET /v1/trust/{agentId}/check` (gate check). The `/v1/trust/verify` endpoint is a convenience form for AAT-based lookup without requiring a resolved `agentId`.
 
 Gateway RPC methods:
 
@@ -108,4 +110,4 @@ Gateway RPC methods:
 
 Live as of 2026-04-28. Behavioral event ingestion active. Non-test agents have non-null scores across all three dimensions.
 
-Vocabulary crosswalk at `aeoess/agent-governance-vocabulary` (PR #46, merged 2026-04-25): `peer_review` exact, `behavioral_trust` exact, `trust_verification` partial, `governance_attestation` partial. Eight canonical terms with explicit `no_mapping` entries and technical rationale.
+Vocabulary crosswalk at `aeoess/agent-governance-vocabulary` (PR #46, merged 2026-04-25): `behavioral_trust` exact, `trust_verification` partial, `governance_attestation` partial. Ten canonical terms with explicit `no_mapping` entries and technical rationale.
