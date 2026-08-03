@@ -133,7 +133,7 @@ Implementation status for `@agentlair/defenseclaw@0.3.0`, verified against the p
 | 2b. Policy schema with strictness levels | **Not met** — runtime tool-call enforcement exists; install-time and inbound-message strictness are not implemented |
 | 3. Default to permissive-with-warnings | **Not met** — ships `mode: enforce`, `failOpen: false` |
 | 4. Handle missing-author / missing-credential without crashing | **Not met** — missing credentials handled without crashing (note); the author-side check requires `before_install`, which is not registered, so the complete requirement cannot be reached |
-| 5. `before_tool_call` under 500ms cold | **Untested** — result caching is implemented, but cold-path latency has not been measured, so we are not claiming it |
+| 5. `before_tool_call` under 500ms cold | **Untested** — nothing has been measured. `checkTrust()` runs on every call and its abort budget is 3000ms (`TRUST_TIMEOUT_MS = 3e3`), so the plugin does not enforce the 500ms ceiling — which is not the same as the cold path measuring above it |
 | 6. Namespaced gateway RPC methods | **Not met** — no `registerGatewayMethod()` calls |
 | 7. Namespaced outbound headers | n/a — `before_dispatch` not implemented |
 | 8. No state mutation outside plugin directory | Met — no filesystem writes in the published bundle |
