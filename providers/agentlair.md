@@ -45,10 +45,10 @@ The `behavioral_trust` mapping in the vocabulary crosswalk is exact. AgentLair's
 
 Scores are integers in [0, 100] per dimension (wire format). Aggregate trust is a weighted combination (default weights: restraint 42.9%, consistency 35.7%, transparency 21.4%).
 
-| Aggregate range | Policy |
+| Score | Policy |
 |----------------|---------------|
-| 0–40 | Block (shipping default is `mode: enforce`, `failOpen: false`) |
-| 41–100 | Pass-through |
+| Below the configured threshold (default: < 40) | Block (shipping default is `mode: enforce`, `failOpen: false`) |
+| At or above the configured threshold (default: ≥ 40) | Pass-through |
 
 Note: SPEC.md §9.3 requires defaulting to permissive-with-warnings on first install. `@agentlair/defenseclaw@0.3.0` ships `mode: "enforce"` and `failOpen: false`, so it blocks by default and does not meet §9.3 today. Setting `mode: "observe"` gives the spec-intended behaviour. See Conformance status below.
 
@@ -100,7 +100,7 @@ Default policy in the shipping plugin is enforce/fail-closed, not the permissive
 
 `POST https://agentlair.dev/v1/trust/verify`
 
-Accepts an AAT (EdDSA JWT). Returns three-dimensional scores and aggregate in [0, 100] range. Response cached per AAT claim set; cache TTL 60s (typical-case `before_tool_call` latency under 100ms after first call).
+Accepts an AAT (EdDSA JWT). Returns three-dimensional scores and aggregate in [0, 100] range.
 
 Related crosswalk endpoints: `GET /v1/trust/{agentId}` (full trust profile) and `GET /v1/trust/{agentId}/check` (gate check). The `/v1/trust/verify` endpoint is a convenience form for AAT-based lookup without requiring a resolved `agentId`.
 
@@ -122,17 +122,17 @@ Vocabulary crosswalk at `aeoess/agent-governance-vocabulary` (PR #46, merged 202
 
 ## Conformance status
 
-**AgentLair does not currently meet SPEC.md §9 v0.1. This section is the authoritative status; earlier revisions of this file overstated it.**
+**AgentLair does not currently meet SPEC.md §9 v0.1.**
 
-Checked against `@agentlair/defenseclaw@0.3.0` as published on npm (the artifact an integrator actually installs), 2026-08-02.
+Implementation status for `@agentlair/defenseclaw@0.3.0`, verified against the published artifact on 2026-08-02.
 
 | §9 requirement | Status |
 |---|---|
 | 1. Register `before_install`, `before_tool_call`, `gateway_start` | **Not met** — only `before_tool_call` (plus a non-spec `after_tool_call`) |
 | 2a. Accept envelope schema (`provider`, `endpoints`, `credentials`) | **Not met** — flat provider-specific schema, `additionalProperties: false` |
-| 2b. Policy schema with strictness levels | **Partial** — runtime tool-call enforcement only; no install-time or inbound-message level |
+| 2b. Policy schema with strictness levels | **Not met** — runtime tool-call enforcement exists; install-time and inbound-message strictness are not implemented |
 | 3. Default to permissive-with-warnings | **Not met** — ships `mode: enforce`, `failOpen: false` |
-| 4. Handle missing-author / missing-credential without crashing | Met — missing API key warns and degrades per `failOpen`/`mode` |
+| 4. Handle missing-author / missing-credential without crashing | **Not met** — missing credentials handled without crashing (note); the author-side check requires `before_install`, which is not registered, so the complete requirement cannot be reached |
 | 5. `before_tool_call` under 500ms cold | **Untested** — result caching is implemented, but cold-path latency has not been measured, so we are not claiming it |
 | 6. Namespaced gateway RPC methods | **Not met** — no `registerGatewayMethod()` calls |
 | 7. Namespaced outbound headers | n/a — `before_dispatch` not implemented |
